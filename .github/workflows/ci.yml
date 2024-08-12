@@ -22,8 +22,6 @@ jobs:
           node-version: 20
       - name: npm install
         run: npm install --frozen-lockfile
-      - name: cargo install
-        run: cargo install
       - name: Install wasm-pack
         run: cargo install wasm-pack
       - name: build wasm

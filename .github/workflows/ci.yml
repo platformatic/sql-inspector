@@ -1,0 +1,30 @@
+name: run tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: npm install
+        run: npm install --frozen-lockfile
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo test --all-features
+      - name: build wasm 
+        run: npm run build:wasm
+        run: npm run lint
+      - name: Run test suite
+        run: npm test

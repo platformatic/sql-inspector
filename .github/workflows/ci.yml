@@ -23,8 +23,9 @@ jobs:
         run: npm install --frozen-lockfile
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test --all-features
-      - name: build wasm 
+      - name: build wasm
         run: npm run build:wasm
+      - name: lint check
         run: npm run lint
       - name: Run test suite
         run: npm test

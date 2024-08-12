@@ -18,7 +18,7 @@ use wasm_bindgen::prelude::*;
 //
 // This query is ambiguous, because we don't know if the `address` and `name` columns are
 // from table1 or table2. We can't resolve this without the actual DB schema.
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct ExtractResult {
     tables: Vec<String>,
     columns: Vec<String>,

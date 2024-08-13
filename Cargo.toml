@@ -1,7 +1,9 @@
 [package]
 name = "sql-inspector"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
+authors = ["Marco Piraccini <marco@platformatic.dev>"]
+description = "Inspects SQL queries to identify the impacted tables/columns"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

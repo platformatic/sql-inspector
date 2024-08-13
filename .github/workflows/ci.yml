@@ -20,13 +20,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
-      - name: npm install
-        run: npm install --frozen-lockfile
       - name: Install wasm-pack
         run: cargo install wasm-pack
+      - name Install cargo make
+        run: cargo install make
       - name: build wasm
-        run: npm run build:wasm
+        run: cargo make wasm
       - name: lint check
-        run: npm run lint
+        run: cargo make lint
       - name: Run test suite
-        run: npm test
+        run: cargo make test

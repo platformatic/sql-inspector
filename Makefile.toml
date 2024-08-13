@@ -1,0 +1,35 @@
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.lint]
+command = "cargo"
+args = ["clippy"]
+
+[tasks.testrs]
+command = "cargo"
+args = ["test"]
+dependencies = ["clean"]
+
+[tasks.testjs]
+command = "node"
+args = ["--test", "./test"]
+dependencies = ["clean"]
+
+[tasks.test]
+dependencies = ["testrs", "testjs"]
+
+[tasks.wasm]
+command = "wasm-pack"
+args = ["build", "--target", "nodejs", "--scope", "platformatic", "--release"]
+dependencies = ["clean"]
+
+[tasks.publish]
+command = "wasm-pack"
+args = ["publish"]
+dependencies = ["wasm"]

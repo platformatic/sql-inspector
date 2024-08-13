@@ -22,7 +22,7 @@ jobs:
           node-version: 20
       - name: Install wasm-pack
         run: cargo install wasm-pack
-      - name Install cargo make
+      - name: Install cargo make
         run: cargo install make
       - name: build wasm
         run: cargo make wasm

@@ -1,0 +1,15 @@
+{
+  "name": "@platformatic/sql-inspector",
+  "collaborators": [
+    "Marco Piraccini <marco@platformatic.dev>"
+  ],
+  "description": "Inspects SQL queries to identify the impacted tables/columns",
+  "version": "0.0.1",
+  "files": [
+    "sql_inspector_bg.wasm",
+    "sql_inspector.js",
+    "sql_inspector.d.ts"
+  ],
+  "main": "sql_inspector.js",
+  "types": "sql_inspector.d.ts"
+}

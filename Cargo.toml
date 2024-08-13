@@ -14,6 +14,8 @@ serde = { version = "1.0", features = ["derive"] }
 wasm-bindgen = "0.2.92"
 serde-wasm-bindgen = "0.6.5"
 
+[dev-dependencies]
+cargo-watch = "8.5.2"
 
 [profile.release]
 opt-level = 3

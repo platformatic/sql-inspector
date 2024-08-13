@@ -18,10 +18,23 @@ use wasm_bindgen::prelude::*;
 //
 // This query is ambiguous, because we don't know if the `address` and `name` columns are
 // from table1 or table2. We can't resolve this without the actual DB schema.
-#[derive(Default, Debug, Serialize, Deserialize)]
+
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
+enum QueryType {
+    #[default]
+    SELECT,
+    INSERT,
+    UPDATE,
+    DELETE,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ExtractResult {
     tables: Vec<String>,
     columns: Vec<String>,
+    target_table: String, // This is the target table in the INSERT, UPDATE or DELETE statements case
+    query_type: QueryType,
 }
 
 impl fmt::Display for ExtractResult {
@@ -35,14 +48,30 @@ struct V {
     columns: HashSet<String>,
     tables: HashSet<String>,
     aliases: HashMap<String, String>,
+    target_table: String, // This is the target table in the INSERT, UPDATE or DELETE statements case
+    query_type: QueryType,
 }
 
+fn join(arr: &[Ident]) -> String {
+    let mut result = String::new();
+    for (index, s) in arr.iter().enumerate() {
+        if index > 0 {
+            result.push('.');
+        }
+        let q = s.to_string();
+        result.push_str(q.as_str());
+    }
+    result
+}
+
+#[allow(clippy::assigning_clones)]
 impl Visitor for V {
     type Break = ();
 
     fn pre_visit_statement(&mut self, _stmt: &Statement) -> ControlFlow<Self::Break> {
         match _stmt {
             Statement::Query(q) => {
+                self.query_type = QueryType::SELECT;
                 if let SetExpr::Select(select) = (q.body).as_ref() {
                     for select_item in &select.projection {
                         if let SelectItem::UnnamedExpr(expr) = select_item {
@@ -50,9 +79,7 @@ impl Visitor for V {
                                 self.columns.insert(ident.value.clone());
                             } else if let Expr::CompoundIdentifier(ident) = expr {
                                 // This is a compound identifier, like table.column
-                                let first = ident.first().unwrap();
-                                let second = ident.last().unwrap();
-                                let full_name = format!("{first}.{second}");
+                                let full_name = join(ident);
                                 self.columns.insert(full_name);
                             }
                         } else if let SelectItem::ExprWithAlias { expr, alias: _ } = select_item {
@@ -60,9 +87,7 @@ impl Visitor for V {
                                 self.columns.insert(ident.value.clone());
                             } else if let Expr::CompoundIdentifier(ident) = expr {
                                 // This is a compound identifier, like table.column
-                                let first = ident.first().unwrap();
-                                let second = ident.last().unwrap();
-                                let full_name = format!("{first}.{second}");
+                                let full_name = join(ident);
                                 self.columns.insert(full_name);
                             }
                         } else if let SelectItem::Wildcard(_expr) = select_item {
@@ -72,8 +97,14 @@ impl Visitor for V {
                 }
             }
             Statement::Insert(i) => {
+                self.query_type = QueryType::INSERT;
+                // The "insert" statement has a table as a target
+                let table_name = i.table_name.to_string();
+                self.tables.insert(table_name.clone());
+                self.target_table = table_name.clone();
                 for i in &i.columns {
-                    self.columns.insert(i.to_string());
+                    let full_name = format!("{table_name}.{i}");
+                    self.columns.insert(full_name);
                 }
             }
             Statement::Update {
@@ -83,12 +114,52 @@ impl Visitor for V {
                 selection: _,
                 returning: _,
             } => {
+                self.query_type = QueryType::UPDATE;
+                // The "insert" statement has a table as a target
+                let table_name = table.to_string();
+                self.target_table = table_name.clone();
                 for assignment in assignments {
-                    let ident = assignment.target.to_string();
-                    self.columns.insert(ident);
+                    let value = assignment.value.clone();
+                    let target = assignment.target.clone();
+                    match value {
+                        Expr::CompoundIdentifier(ident) => {
+                            // This is a compound identifier, like table.column
+                            let first = ident.first().unwrap();
+                            let second = ident.last().unwrap();
+                            let full_name = format!("{first}.{second}");
+                            self.columns.insert(full_name);
+                        }
+                        Expr::Identifier(ident) => {
+                            let full_name = format!("{table_name}.{ident}");
+                            self.columns.insert(full_name);
+                        }
+                        _ => {}
+                    }
+                    if let AssignmentTarget::ColumnName(ident) = target {
+                        // It's a tuple with one vector of idents
+                        if (ident.0).len() == 1 {
+                            let column = ident.0.first().unwrap();
+                            let full_name = format!("{table_name}.{column}");
+                            self.columns.insert(full_name);
+                        } else {
+                            let full_name = join(&ident.0);
+                            self.columns.insert(full_name);
+                        }
+                    }
                 }
                 self.tables.insert(table.to_string());
             }
+            Statement::Delete(delete) => {
+                self.query_type = QueryType::DELETE;
+                if let FromTable::WithFromKeyword(tables) = &delete.from {
+                    self.target_table = tables[0].to_string();
+                    // In mysql, the FROM clause can have multiple tables
+                    for i in tables {
+                        self.tables.insert(i.to_string());
+                    }
+                }
+            }
+
             _ => {}
         }
         ControlFlow::Continue(())
@@ -157,7 +228,14 @@ fn inspect(sql: &str) -> ExtractResult {
     let mut tables: Vec<String> = Vec::from_iter(visitor.tables.iter().map(|c| c.to_string()));
     columns.sort();
     tables.sort();
-    ExtractResult { columns, tables }
+    let target_table = visitor.target_table.clone();
+    let query_type = visitor.query_type;
+    ExtractResult {
+        columns,
+        tables,
+        target_table,
+        query_type,
+    }
 }
 
 // This is the entry point for the WASM module, return a JSON with the result
@@ -171,11 +249,11 @@ pub fn sqlinspector(sql: &str) -> JsValue {
 mod tests {
     use super::*;
 
-    fn test_extract(sql: &str, columns: Vec<&str>, tables: Vec<&str>) {
+    fn test_extract(sql: &str, columns: Vec<&str>, tables: Vec<&str>, query_type: QueryType) {
         let res = inspect(sql);
         assert_eq!(res.columns, columns);
         assert_eq!(res.tables, tables);
-        println!("{:?}", res);
+        assert_eq!(res.query_type, query_type);
     }
 
     #[test]
@@ -296,60 +374,62 @@ mod tests {
         )];
 
         for (sql, columns, tables) in tests {
-            test_extract(sql, columns, tables);
+            test_extract(sql, columns, tables, QueryType::SELECT);
         }
     }
 
     #[test]
     fn insert() {
-        let tests = vec![(
-            // simple
-            "INSERT INTO users (id, name) VALUES (1, 'Marco')",
-            vec!["id", "name"],
-            vec!["users"],
-        ), (
-            // multiple
-            "INSERT INTO Customers (CustomerName, ContactName, Address, City, PostalCode, Country)
-                VALUES
-                ('Platformatic', 'Luca', 'xxx 21', 'Vancouver', '4006', 'Canada'),
-                ('Platformatic eu', 'Marco', 'yyy 23', 'Bologna', '40137', 'Italy');",
-            vec!["Address", "City", "ContactName", "Country", "CustomerName", "PostalCode"],
-            vec!["Customers"] 
-        ), (
-            // without columns
-            "INSERT INTO Customers VALUES (5,'Harry', 'Potter', 31, 'Hogwarts');",
-            vec![],
-            vec!["Customers"]
-        ),
+        let tests = vec![
             (
-            "INSERT INTO Table1 (test_date, testno, examno, serialno, type, hours)
-                SELECT T2.test_date, T4.testno, T2.examno, T2.serialno, type, (T3.started- T3.ended) as hours
-                FROM Table2 T2, Table3 T3, Table4 T4
-                    Where T2.testno = T3.testno
-                    And T4.testno = 1
-                    and type = 'xxxxx'; ",
-            vec![
-                "Table2.examno", 
-                "Table2.serialno", 
-                "Table2.test_date", 
-                "Table2.testno", 
-                "Table3.ended", 
-                "Table3.started", 
-                "Table3.testno", 
-                "Table4.testno", 
-                "examno", 
-                "hours", 
-                "serialno", 
-                "test_date", 
-                "testno", 
-                "type"
-            ],
-            vec!["Table1", "Table2", "Table3", "Table4"],
-        )
+                // simple
+                "INSERT INTO users (id, name) VALUES (1, 'Marco')",
+                vec!["users.id", "users.name"],
+                vec!["users"],
+            ), (
+                // multiple
+                "INSERT INTO Customers (CustomerName, ContactName, Address, City, PostalCode, Country)
+                    VALUES
+                    ('Platformatic', 'Luca', 'xxx 21', 'Vancouver', '4006', 'Canada'),
+                    ('Platformatic eu', 'Marco', 'yyy 23', 'Bologna', '40137', 'Italy');",
+                vec!["Customers.Address", "Customers.City", "Customers.ContactName", "Customers.Country", "Customers.CustomerName", "Customers.PostalCode"],
+                vec!["Customers"]
+            ), (
+                // without columns
+                "INSERT INTO Customers VALUES (5,'Harry', 'Potter', 31, 'Hogwarts');",
+                vec![],
+                vec!["Customers"]
+            ),
+                (
+                "INSERT INTO Table1 (test_date, testno, examno, serialno, type, hours)
+                    SELECT T2.test_date, T4.testno, T2.examno, T2.serialno, type, (T3.started- T3.ended) as hours
+                    FROM Table2 T2, Table3 T3, Table4 T4
+                        Where T2.testno = T3.testno
+                        And T4.testno = 1
+                        and type = 'xxxxx'; ",
+                vec![
+                    "Table1.examno",
+                    "Table1.hours",
+                    "Table1.serialno",
+                    "Table1.test_date",
+                    "Table1.testno",
+                    "Table1.type",
+                    "Table2.examno",
+                    "Table2.serialno",
+                    "Table2.test_date",
+                    "Table2.testno",
+                    "Table3.ended",
+                    "Table3.started",
+                    "Table3.testno",
+                    "Table4.testno", 
+                    "type"
+                ],
+                vec!["Table1", "Table2", "Table3", "Table4"],
+            )
         ];
 
         for (sql, columns, tables) in tests {
-            test_extract(sql, columns, tables);
+            test_extract(sql, columns, tables, QueryType::INSERT);
         }
     }
 
@@ -381,7 +461,7 @@ mod tests {
         ];
 
         for (sql, columns, tables) in tests {
-            test_extract(sql, columns, tables);
+            test_extract(sql, columns, tables, QueryType::DELETE);
         }
     }
 
@@ -390,8 +470,8 @@ mod tests {
         let tests = vec![
             (
                 // simple
-                "UPDATE users SET age = 30 WHERE age > 30",
-                vec!["age"],
+                "UPDATE users SET age = 30",
+                vec!["users.age"],
                 vec!["users"],
             ),
             (
@@ -399,8 +479,8 @@ mod tests {
                 "UPDATE Test
                     SET Test_Date = '2021-01-01'
                     WHERE Testno = 1
-                    AND TYPE = 'Non-FLight';",
-                vec!["TYPE", "Test_Date", "Testno"],
+                    AND TYPE = 'xxxxxxx';",
+                vec!["TYPE", "Test.Test_Date", "Testno"],
                 vec!["Test"],
             ),
             (
@@ -414,28 +494,28 @@ mod tests {
             ),
             (
                 // Complex update
-                "UPDATE Component SET Name = p.Number
-                    FROM Part p JOIN 
-                        ComponentPart cp ON p.ID = cp.PartID  JOIN 
-                        Component c      ON cp.ComponentID = c.ID  
-                    WHERE p.BrandID = 1003
-                    AND Component.Name='Door'",
+                "UPDATE component SET name = p.number
+                       FROM part p 
+                       JOIN
+                           component_part cp ON p.id = cp.partId  JOIN
+                           component c ON cp.componentId = c.id
+                       WHERE p.brandId = 1003
+                       AND component.name='xxx'",
                 vec![
-                    "Component.ID",
-                    "Component.Name",
-                    "ComponentPart.ComponentID",
-                    "ComponentPart.PartID",
-                    "Name",
-                    "Part.BrandID",
-                    "Part.ID",
-                    "Part.Number",
+                    "component.id",
+                    "component.name",
+                    "component_part.componentId",
+                    "component_part.partId",
+                    "part.brandId",
+                    "part.id",
+                    "part.number",
                 ],
-                vec!["Component", "ComponentPart", "Part"],
+                vec!["component", "component_part", "part"],
             ),
         ];
 
         for (sql, columns, tables) in tests {
-            test_extract(sql, columns, tables);
+            test_extract(sql, columns, tables, QueryType::UPDATE);
         }
     }
 }

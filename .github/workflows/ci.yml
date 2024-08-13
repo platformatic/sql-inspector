@@ -17,13 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "latest"
+
+      - name: Install cargo-make
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --debug cargo-make
+
       - uses: actions/setup-node@v3
         with:
           node-version: 20
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
-      - name: Install cargo make
-        run: cargo install make
+
       - name: build wasm
         run: cargo make wasm
       - name: lint check

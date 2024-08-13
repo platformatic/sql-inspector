@@ -19,6 +19,7 @@ const res = sqlinspector("select name, id from users where age > 30;");
 const expected = {
   columns: ["age", "id", "name"],
   tables: ["users"],
+  query_type: "SELECT",
 };
 deepEqual(res, expected);
 ```
@@ -30,6 +31,7 @@ const res = sqlinspector("select * from users u");
 const expected = {
   columns: ["*"],
   tables: ["users"],
+  query_type: "SELECT",
 };
 deepEqual(res, expected);
 ```

@@ -175,6 +175,7 @@ mod tests {
         let res = inspect(sql);
         assert_eq!(res.columns, columns);
         assert_eq!(res.tables, tables);
+        println!("{:?}", res);
     }
 
     #[test]
@@ -185,66 +186,113 @@ mod tests {
                 "SELECT id FROM users WHERE age > 30",
                 vec!["age", "id"],
                 vec!["users"],
-            ),
-            (
+            ),(
                 // alias (must be ignored)
                 "SELECT id, name as name2 FROM users WHERE age > 30",
                 vec!["age", "id", "name"],
                 vec!["users"],
-            ),
-            (
+            ),(
                 // wildcard
                 "SELECT * FROM users WHERE age > 30",
                 vec!["*", "age"],
                 vec!["users"],
-            ),
-            (
+            ),(
                 // compound identifier
                 "SELECT users.id, users.name FROM users WHERE age > 30",
                 vec!["age", "users.id", "users.name"],
                 vec!["users"],
-            ),
-            (
+            ),(
+                // join with no fully qualified columns
+                "select address, name from table1 join table2 on table1.id = table2.id",
+                vec!["address", "name", "table1.id", "table2.id"],
+                vec!["table1", "table2"]
+            ),(
                 // Join
                 "SELECT users.id, users.name, orders.id FROM users JOIN orders ON users.id = orders.user_id WHERE age > 30",
                 vec!["age", "orders.id", "orders.user_id", "users.id", "users.name"],
                 vec!["orders", "users"]
-            ),
-            (
+            ),(
                 // join with some not compund identifiers
                 "SELECT users.id, name, orders.id, title FROM users JOIN orders ON users.id = orders.user_id WHERE age > 30",
                 vec!["age", "name", "orders.id", "orders.user_id", "title", "users.id"],
                 vec!["orders", "users"]
-            ),
-            (
+            ), (
                 // join with some alias
                 "SELECT id, users2.name as name2, orders.id, title FROM users as users2 JOIN orders ON users.id = orders.user_id WHERE age > 30",
                 vec!["age", "id", "orders.id", "orders.user_id", "title", "users.id", "users.name"],
                 vec!["orders", "users"]
             ), (
                 // more aliases
-            " Select S.Test_Date, E.Testno, S.Examno, S.Serialno, Type, (F.STARTED- F.ENDED) as hours
-                 From Semester S, TIME F, TESTPAPERS E
-                     Where S.Testno = F.Testno
-                     And E.Testno = 1
-                     and TYPE = 'Non-FLight'; ",
-            vec!["Semester.Examno", "Semester.Serialno", "Semester.Test_Date", "Semester.Testno", "TESTPAPERS.Testno", "TIME.ENDED", "TIME.STARTED", "TIME.Testno", "TYPE", "Type"],
-            vec!["Semester", "TESTPAPERS", "TIME"],
+                "Select t1.test_date, t3.testno, t1.examno, t1.serialno, type, (t2.started - t2.ended) as hours
+                 From Table1 t1, Table2 t2, Table3 t3
+                     Where t1.testno = t2.testno
+                     And t3.testno = 1
+                     and type = 'xxxxx'; ",
+                vec![
+                    "Table1.examno", 
+                    "Table1.serialno", 
+                    "Table1.test_date", 
+                    "Table1.testno",
+                    "Table2.ended", 
+                    "Table2.started", 
+                    "Table2.testno", 
+                    "Table3.testno", 
+                    "type",
+                ],
+                vec!["Table1", "Table2", "Table3"]
             ), (
-                // multiple join
-             "SELECT customerName, customercity, customermail, ordertotal,salestotal
-                FROM onlinecustomers AS c
-                INNER JOIN orders AS o ON c.customerid = o.customerid
+                // multiple joins
+                "SELECT customerName, customercity, customermail, ordertotal, salestotal
+                FROM table1 AS t1
+                INNER JOIN table2 AS t2 ON t1.customerid = t2.customerid
                 LEFT JOIN
-                    sales AS s
-                    ON o.orderId = s.orderId
-                    WHERE s.salesId IS NULL",
-            vec!["customerName", "customercity", "customermail", "onlinecustomers.customerid", "orders.customerid", "orders.orderId", "ordertotal", "sales.orderId", "sales.salesId", "salestotal"],
-            vec!["onlinecustomers", "orders", "sales"]
-        ),(
-            "select address, name from table1 join table2 on table1.id = table2.id",
-            vec!["address", "name", "table1.id", "table2.id"],
-            vec!["table1", "table2"]
+                    table3 AS t3
+                    ON t2.orderId = t3.orderId
+                    WHERE t3.salesId IS NULL",
+                vec![
+                    "customerName", 
+                    "customercity", 
+                    "customermail", 
+                    "ordertotal", 
+                    "salestotal",
+                    "table1.customerid", 
+                    "table2.customerid",
+                    "table2.orderId",
+                    "table3.orderId", 
+                    "table3.salesId"
+                ],
+                vec!["table1", "table2", "table3"]
+            ),(
+                // complex query with join, counts and group by 
+                "SELECT
+                    t1.id, 
+                    t1.label_real_address, 
+                    t1.ext, 
+                    COUNT(t2.contact_id), 
+                    COUNT(t4.release_id) 
+                FROM
+                    table1 t1
+                    LEFT JOIN table2 t2  ON t2.contact_type='lx' AND t2.contact_id=t1.id 
+                    LEFT JOIN table3 t3 ON t3.id=t1.id 
+                    LEFT JOIN table4 t4 ON t3.release_id=t4.release_id 
+                GROUP BY t1.label_real_address 
+                ORDER BY COUNT(t2.contact_id) DESC", 
+                vec![
+                    "table1.ext", 
+                    "table1.id", 
+                    "table1.label_real_address",
+                    "table2.contact_id", 
+                    "table2.contact_type",
+                    "table3.id", 
+                    "table3.release_id",
+                    "table4.release_id", 
+                ],
+                vec!["table1", "table2", "table3", "table4"]
+            ),(
+                "SELECT id, name from (SELECT * FROM users UNION SELECT * FROM customers)",
+                vec!["id", "name"],
+                vec!["customers", "users"]
+
         )];
 
         for (sql, columns, tables) in tests {
@@ -256,42 +304,47 @@ mod tests {
     fn insert() {
         let tests = vec![(
             // simple
-            "INSERT INTO users (id, name) VALUES (1, 'John')",
+            "INSERT INTO users (id, name) VALUES (1, 'Marco')",
             vec!["id", "name"],
             vec!["users"],
-        ),
-        (
+        ), (
             // multiple
             "INSERT INTO Customers (CustomerName, ContactName, Address, City, PostalCode, Country)
                 VALUES
-                ('Cardinal', 'Tom B. Erichsen', 'Skagen 21', 'Stavanger', '4006', 'Norway'),
-                ('Greasy Burger', 'Per Olsen', 'Gateveien 15', 'Sandnes', '4306', 'Norway'),
-                ('Tasty Tee', 'Finn Egan', 'Streetroad 19B', 'Liverpool', 'L1 0AA', 'UK');",
+                ('Platformatic', 'Luca', 'xxx 21', 'Vancouver', '4006', 'Canada'),
+                ('Platformatic eu', 'Marco', 'yyy 23', 'Bologna', '40137', 'Italy');",
             vec!["Address", "City", "ContactName", "Country", "CustomerName", "PostalCode"],
             vec!["Customers"] 
         ), (
             // without columns
-            "INSERT INTO Customers VALUES (5,'Harry', 'Potter', 31, 'USA');",
+            "INSERT INTO Customers VALUES (5,'Harry', 'Potter', 31, 'Hogwarts');",
             vec![],
             vec!["Customers"]
         ),
             (
-            "Insert Into Test (Test_Date, Testno, Examno, Serialno, Type, Hours)
-                Select S.Test_Date, E.Testno, S.Examno, S.Serialno, Type, (F.STARTED- F.ENDED) as hours
-                From Semester S, TIME F, TESTPAPERS E
-                    Where S.Testno = F.Testno
-                    And E.Testno = 1
-                    and TYPE = 'Non-FLight'; ",
-            vec!["Examno", 
-                "Hours", 
-                "Semester.Examno", 
-                "Semester.Serialno", 
-                "Semester.Test_Date", 
-                "Semester.Testno", 
-                "Serialno", 
-                "TESTPAPERS.Testno",
-                "TIME.ENDED", "TIME.STARTED", "TIME.Testno", "TYPE", "Test_Date", "Testno", "Type"],
-            vec!["Semester", "TESTPAPERS", "TIME", "Test"],
+            "INSERT INTO Table1 (test_date, testno, examno, serialno, type, hours)
+                SELECT T2.test_date, T4.testno, T2.examno, T2.serialno, type, (T3.started- T3.ended) as hours
+                FROM Table2 T2, Table3 T3, Table4 T4
+                    Where T2.testno = T3.testno
+                    And T4.testno = 1
+                    and type = 'xxxxx'; ",
+            vec![
+                "Table2.examno", 
+                "Table2.serialno", 
+                "Table2.test_date", 
+                "Table2.testno", 
+                "Table3.ended", 
+                "Table3.started", 
+                "Table3.testno", 
+                "Table4.testno", 
+                "examno", 
+                "hours", 
+                "serialno", 
+                "test_date", 
+                "testno", 
+                "type"
+            ],
+            vec!["Table1", "Table2", "Table3", "Table4"],
         )
         ];
 
@@ -313,7 +366,7 @@ mod tests {
                 // With AND condition
                 "DELETE FROM Test
                     WHERE Testno = 1
-                    AND TYPE = 'Non-FLight';",
+                    AND TYPE = 'xxxxxx';",
                 vec!["TYPE", "Testno"],
                 vec!["Test"],
             ),

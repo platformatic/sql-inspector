@@ -4,13 +4,32 @@ const { sqlinspector } = require('../pkg/sql_inspector')
 
 // Some simple JS - WASM interop tests. The proper unit tests
 // for the inspector are in Rust.
-test('simple select', async () => {
+test('simple selects', async () => {
   const res = sqlinspector('select name, id from users;')
   const expected = {
     columns: ['id', 'name'],
     tables: ['users'],
   }
   deepEqual(res, expected)
+
+  {
+    const res = sqlinspector('select name, id from users where age > 30;')
+    const expected = {
+      columns: ['age', 'id', 'name'],
+      tables: ['users'],
+    }
+    deepEqual(res, expected)
+  }
+
+
+  {
+    const res = sqlinspector('select * from users u')
+    const expected = {
+      columns: ['*'],
+      tables: ['users'],
+    }
+    deepEqual(res, expected)
+  }
 })
 
 test('simple insert', async () => {

@@ -31,8 +31,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: build wasm
-        run: cargo make wasm
+      - name: build
+        run: cargo make build
       - name: lint check
         run: cargo make lint
       - name: Run test suite

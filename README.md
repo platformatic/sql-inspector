@@ -59,14 +59,5 @@ cargo make test
 ### Build
 
 ```
-cargo make wasm
-```
-
-The stuff is build in `pkg`
-
-### Publish
-
-```
-cd pkg
-npm publish
+cargo make build
 ```

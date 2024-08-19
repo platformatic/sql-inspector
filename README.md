@@ -64,33 +64,38 @@ cargo make build
 
 ### Bump version
 
-Use `cargo-bump`, e.g.:
+Change the Cargo version manually on Cargo.toml, e.g.:
 
 ```
-cargo bump patch
+[package]
+name = "sql-inspector"
+version = "0.0.5"
+(...)
 ```
 
-Then this updates the Cargo.lock
+Then updates the Cargo.lock
 
 ```
 cargo update
 ```
 
-Let's push it:
+And stage it
 
 ```
 git add Cargo.lock
+git commit -m "version bumb 0.0.5"
 ```
 
-And:
+Create a tag:
 
 ```
-git commit -m "version bumb 0.0.3"
+git tag v0.0.5
 ```
 
 Finally:
 
 ```
+git push
 git push --tags
 ```
 

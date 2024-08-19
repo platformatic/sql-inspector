@@ -61,3 +61,25 @@ cargo make test
 ```
 cargo make build
 ```
+
+### Bump version
+
+Use `cargo-bump`, e.g.:
+
+```
+cargo bump patch --git-tag
+```
+
+### Publish
+
+You need to be logged on `npm`:
+
+```
+npm login
+```
+
+Then:
+
+```
+cargo make publish
+```

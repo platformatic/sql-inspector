@@ -1,8 +1,8 @@
 const { test } = require('node:test')
 const { deepEqual } = require('node:assert')
-const { sqlinspector } = require('../sql_inspector')
+const { sqlinspector } = require('../pkg/sql_inspector')
 
-// Some simple JS - WASM interop tests. The proper unit tests
+// Minimal JS - WASM interop tests. The proper unit tests
 // for the inspector are in Rust.
 test('simple selects', async () => {
   const res = sqlinspector('select name, id from users;')

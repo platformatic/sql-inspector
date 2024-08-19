@@ -31,9 +31,5 @@ jobs:
         with:
           node-version: 20
 
-      - name: build
-        run: cargo make build
-      - name: lint check
-        run: cargo make lint
       - name: Run test suite
         run: cargo make test

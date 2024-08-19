@@ -24,22 +24,23 @@ dependencies = ["clean"]
 [tasks.testjs]
 command = "node"
 args = ["--test", "./test"]
-dependencies = ["clean"]
+dependencies = ["clean", "wasm"]
 
 [tasks.test]
-dependencies = ["testrs", "testjs"]
+dependencies = ["wasm", "testrs", "testjs"]
 
 [tasks.wasm]
 command = "wasm-pack"
 args = ["build", "--target", "nodejs", "--scope", "platformatic", "--release"]
-dependencies = ["clean"]
+dependencies = ["clean", "format", "lint"]
 
 [tasks.build]
-command = "node"
-args = ["./tools/build.js"]
-dependencies = ["wasm"]
+dependencies = ["test", "wasm"]
 
 [tasks.publish]
 command = "wasm-pack"
 args = ["publish"]
-dependencies = ["wasm"]
+dependencies = ["build"]
+
+[tasks.default]
+alias = "test"

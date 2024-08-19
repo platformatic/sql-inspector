@@ -75,7 +75,7 @@ cargo bump patch --git-tag
 This updates the Cargo.lock
 
 ```
-cargo make build
+cargo update
 ```
 
 Then:

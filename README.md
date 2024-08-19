@@ -70,15 +70,13 @@ Use `cargo-bump`, e.g.:
 cargo bump patch --git-tag
 ```
 
-### Build and push
-
-This updates the Cargo.lock
+Then this updates the Cargo.lock
 
 ```
 cargo update
 ```
 
-Then:
+Let's push it:
 
 ```
 git add Cargo.lock
@@ -108,12 +106,6 @@ Then:
 
 ```
 cargo make publish
-```
-
-After, remember to push the tags:
-
-```
-git push --tags
 ```
 
 The package is published under: https://www.npmjs.com/package/@platformatic/sql-inspector

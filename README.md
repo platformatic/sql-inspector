@@ -70,6 +70,32 @@ Use `cargo-bump`, e.g.:
 cargo bump patch --git-tag
 ```
 
+### Build and push
+
+This updates the Cargo.lock
+
+```
+cargo make build
+```
+
+Then:
+
+```
+git add Cargo.lock
+```
+
+And:
+
+```
+git commit -m "version bumb 0.0.3"
+```
+
+Finally:
+
+```
+git push --tags
+```
+
 ### Publish
 
 You need to be logged on `npm`:

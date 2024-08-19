@@ -83,7 +83,7 @@ And stage it
 
 ```
 git add Cargo.lock Cargo.toml
-git commit -m "version bumb 0.0.5"
+git commit -m "v0.0.5"
 ```
 
 Create a tag:

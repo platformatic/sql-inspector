@@ -67,7 +67,7 @@ cargo make build
 Use `cargo-bump`, e.g.:
 
 ```
-cargo bump patch --git-tag
+cargo bump patch
 ```
 
 Then this updates the Cargo.lock

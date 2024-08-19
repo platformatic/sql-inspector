@@ -83,3 +83,11 @@ Then:
 ```
 cargo make publish
 ```
+
+After, remember to push the tags:
+
+```
+git push --tags
+```
+
+The package is published under: https://www.npmjs.com/package/@platformatic/sql-inspector

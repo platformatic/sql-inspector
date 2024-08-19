@@ -73,7 +73,7 @@ version = "0.0.5"
 (...)
 ```
 
-Then updates the Cargo.lock
+Then updates the Cargo.lock:
 
 ```
 cargo update
@@ -82,7 +82,7 @@ cargo update
 And stage it
 
 ```
-git add Cargo.lock
+git add Cargo.lock Cargo.toml
 git commit -m "version bumb 0.0.5"
 ```
 

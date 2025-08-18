@@ -8,6 +8,47 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen(typescript_custom_section)]
+const TS_APPEND_CONTENT: &'static str = r#"
+/**
+ * The result of parsing a SQL query, containing information about tables and columns.
+ */
+export interface ExtractResult {
+  /**
+   * Array of column names found in the query.
+   * May include table prefixes (e.g., "users.name") for INSERT/UPDATE operations.
+   */
+  columns: string[];
+
+  /**
+   * Array of table names referenced in the query.
+   */
+  tables: string[];
+
+  /**
+   * Type of SQL operation.
+   */
+  query_type: 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
+
+  /**
+   * The primary table being modified (for INSERT/UPDATE operations).
+   * Empty string for SELECT/DELETE operations.
+   */
+  target_table: string;
+}
+
+/**
+ * Parses a SQL query string and returns information about referenced tables and columns.
+ * 
+ * Supports SELECT, INSERT, UPDATE, and DELETE statements.
+ * Does not support DDL statements like CREATE TABLE.
+ * 
+ * @param sql - The SQL query to analyze
+ * @returns Information about tables, columns, and query type
+ */
+export function sqlinspector(sql: string): ExtractResult;
+"#;
+
 // This extracts the columns and tables from a SQL query
 // It returns a ExtractResult struct with the columns and tables
 // Note that in some cases is not possible to "resolve" the columns' table.
@@ -19,9 +60,10 @@ use wasm_bindgen::prelude::*;
 // This query is ambiguous, because we don't know if the `address` and `name` columns are
 // from table1 or table2. We can't resolve this without the actual DB schema.
 
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
 #[allow(clippy::upper_case_acronyms)]
-enum QueryType {
+#[wasm_bindgen]
+pub enum QueryType {
     #[default]
     SELECT,
     INSERT,
@@ -250,8 +292,8 @@ fn inspect(sql: &str) -> ExtractResult {
     }
 }
 
-// This is the entry point for the WASM module, return a JSON with the result
-#[wasm_bindgen]
+// This is the entry point for the WASM module, return the result as a JS object
+#[wasm_bindgen(skip_typescript)]
 pub fn sqlinspector(sql: &str) -> JsValue {
     let res = inspect(sql);
     serde_wasm_bindgen::to_value(&res).unwrap()

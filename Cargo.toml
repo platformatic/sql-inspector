@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Marco Piraccini <marco@platformatic.dev>"]
 description = "Inspects SQL queries to identify the impacted tables/columns"
+license = "Apache-2.0"
+repository = "https://github.com/platformatic/sql-inspector"
+keywords = ["sql", "parser", "database", "query", "ast"]
+categories = ["database", "parsing"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]

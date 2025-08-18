@@ -56,6 +56,8 @@ To run all of them:
 cargo make test
 ```
 
+**Note:** The build uses `--no-opt` flag to skip wasm-opt optimization due to compatibility issues with bulk memory operations in the current wasm-opt version bundled with wasm-pack. This is a known issue when using modern Rust compilers (1.79+) with wasm-pack 0.13.x.
+
 ### Build
 
 ```

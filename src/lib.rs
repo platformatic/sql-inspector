@@ -99,7 +99,7 @@ impl Visitor for V {
             Statement::Insert(i) => {
                 self.query_type = QueryType::INSERT;
                 // The "insert" statement has a table as a target
-                let table_name = i.table_name.to_string();
+                let table_name = i.table.to_string();
                 self.tables.insert(table_name.clone());
                 self.target_table = table_name.clone();
                 for i in &i.columns {
@@ -113,6 +113,7 @@ impl Visitor for V {
                 from: _,
                 selection: _,
                 returning: _,
+                or: _,
             } => {
                 self.query_type = QueryType::UPDATE;
                 // The "insert" statement has a table as a target
@@ -142,7 +143,16 @@ impl Visitor for V {
                             let full_name = format!("{table_name}.{column}");
                             self.columns.insert(full_name);
                         } else {
-                            let full_name = join(&ident.0);
+                            // Convert ObjectNameParts to Idents for join function
+                            let idents: Vec<Ident> = ident
+                                .0
+                                .iter()
+                                .filter_map(|part| match part {
+                                    ObjectNamePart::Identifier(ident) => Some(ident.clone()),
+                                    ObjectNamePart::Function(_) => None,
+                                })
+                                .collect();
+                            let full_name = join(&idents);
                             self.columns.insert(full_name);
                         }
                     }
@@ -180,13 +190,15 @@ impl Visitor for V {
 
     fn pre_visit_relation(&mut self, relation: &ObjectName) -> ControlFlow<Self::Break> {
         // Relation === table name
-        let table_name = relation.0[0].value.clone();
-        self.tables.insert(table_name.clone());
+        if let Some(ObjectNamePart::Identifier(ident)) = relation.0.first() {
+            let table_name = ident.value.clone();
+            self.tables.insert(table_name);
+        }
         ControlFlow::Continue(())
     }
 
     fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
-        if let Expr::Wildcard = expr {
+        if let Expr::Wildcard(_) = expr {
             self.columns.insert("*".to_string());
         }
         if let Expr::Identifier(ident) = expr {

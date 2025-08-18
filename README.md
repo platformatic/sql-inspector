@@ -30,7 +30,7 @@ npm install @platformatic/sql-inspector
 ## Usage
 
 ```javascript
-const { sqlinspector } = require('@platformatic/sql-inspector');
+const { sqlinspector } = require("@platformatic/sql-inspector");
 
 // Basic SELECT query
 const result = sqlinspector("SELECT name, id FROM users WHERE age > 30");
@@ -51,7 +51,9 @@ console.log(wildcardResult);
 // }
 
 // INSERT statement
-const insertResult = sqlinspector("INSERT INTO products (name, price) VALUES ('Widget', 19.99)");
+const insertResult = sqlinspector(
+  "INSERT INTO products (name, price) VALUES ('Widget', 19.99)",
+);
 console.log(insertResult);
 // Output: {
 //   columns: ["products.name", "products.price"],
@@ -67,9 +69,11 @@ console.log(insertResult);
 Parses a SQL query string and returns information about referenced tables and columns.
 
 #### Parameters
+
 - `sql` (string): The SQL query to analyze
 
 #### Returns
+
 - `ExtractResult` object with:
   - `columns` (string[]): Array of column names (may include table prefixes)
   - `tables` (string[]): Array of table names
@@ -123,12 +127,6 @@ cargo build
 
 ### Publishing
 
-#### Rust Crate (crates.io)
-```bash
-cargo publish
-```
-
-#### NPM Package
 1. Build the WASM package: `cargo make build`
 2. Navigate to the generated package: `cd pkg`
 3. Login to NPM: `npm login`

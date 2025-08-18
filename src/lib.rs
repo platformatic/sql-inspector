@@ -210,7 +210,7 @@ impl Visitor for V {
 fn inspect(sql: &str) -> ExtractResult {
     let statements = Parser::parse_sql(&GenericDialect {}, sql).unwrap();
     let mut visitor = V::default();
-    statements.visit(&mut visitor);
+    let _ = statements.visit(&mut visitor);
     let mut columns: Vec<String> = Vec::from_iter(visitor.columns.iter().map(|c| c.to_string()));
     // We replace the aliases with the real table name for
     // the fully-qualified columns
@@ -219,7 +219,7 @@ fn inspect(sql: &str) -> ExtractResult {
             continue;
         }
         let prefix = c.split('.').next().unwrap();
-        let col = c.split('.').last().unwrap();
+        let col = c.split('.').next_back().unwrap();
         if let Some(alias) = visitor.aliases.get(prefix) {
             *c = format!("{}.{}", alias, col);
         }

@@ -23,7 +23,7 @@ dependencies = ["clean"]
 
 [tasks.testjs]
 command = "node"
-args = ["--test", "./test"]
+args = ["--test", "./test/index.test.js"]
 dependencies = ["clean", "wasm"]
 
 [tasks.test]
@@ -31,7 +31,7 @@ dependencies = ["wasm", "testrs", "testjs"]
 
 [tasks.wasm]
 command = "wasm-pack"
-args = ["build", "--target", "nodejs", "--scope", "platformatic", "--release"]
+args = ["build", "--target", "nodejs", "--scope", "platformatic", "--release", "--no-opt"]
 dependencies = ["clean", "format", "lint"]
 
 [tasks.build]

@@ -38,7 +38,8 @@ console.log(result);
 // Output: {
 //   columns: ["age", "id", "name"],
 //   tables: ["users"],
-//   query_type: "SELECT"
+//   query_type: "SELECT",
+//   target_table: ""
 // }
 
 // Wildcard queries (columns are not expanded)
@@ -47,18 +48,38 @@ console.log(wildcardResult);
 // Output: {
 //   columns: ["*"],
 //   tables: ["users"],
-//   query_type: "SELECT"
+//   query_type: "SELECT",
+//   target_table: ""
 // }
 
 // INSERT statement
-const insertResult = sqlinspector(
-  "INSERT INTO products (name, price) VALUES ('Widget', 19.99)",
-);
+const insertResult = sqlinspector("INSERT INTO users (id, name) VALUES (1, 'John')");
 console.log(insertResult);
 // Output: {
-//   columns: ["products.name", "products.price"],
-//   tables: ["products"],
-//   query_type: "INSERT"
+//   columns: ["users.id", "users.name"],
+//   tables: ["users"],
+//   query_type: "INSERT",
+//   target_table: "users"
+// }
+
+// UPDATE statement
+const updateResult = sqlinspector("UPDATE users SET age = 30");
+console.log(updateResult);
+// Output: {
+//   columns: ["users.age"],
+//   tables: ["users"],
+//   query_type: "UPDATE",
+//   target_table: "users"
+// }
+
+// DELETE statement
+const deleteResult = sqlinspector("DELETE users WHERE age > 30");
+console.log(deleteResult);
+// Output: {
+//   columns: ["age"],
+//   tables: ["users"],
+//   query_type: "DELETE",
+//   target_table: ""
 // }
 ```
 
@@ -74,10 +95,34 @@ Parses a SQL query string and returns information about referenced tables and co
 
 #### Returns
 
-- `ExtractResult` object with:
-  - `columns` (string[]): Array of column names (may include table prefixes)
-  - `tables` (string[]): Array of table names
-  - `query_type` (string): Type of query (`SELECT`, `INSERT`, `UPDATE`, or `DELETE`)
+`ExtractResult` object with the following properties:
+
+- `columns` (string[]): Array of column names found in the query. May include table prefixes (e.g., `"users.name"`) for INSERT/UPDATE operations
+- `tables` (string[]): Array of table names referenced in the query
+- `query_type` (string): Type of SQL operation - one of `"SELECT"`, `"INSERT"`, `"UPDATE"`, or `"DELETE"`
+- `target_table` (string): The primary table being modified (for INSERT/UPDATE operations). Empty string for SELECT/DELETE operations
+
+#### Examples
+
+```javascript
+// SELECT query
+sqlinspector("SELECT name FROM users WHERE age > 18")
+// Returns: {
+//   columns: ["age", "name"],
+//   tables: ["users"],
+//   query_type: "SELECT",
+//   target_table: ""
+// }
+
+// INSERT query  
+sqlinspector("INSERT INTO products (name, price) VALUES ('item', 10)")
+// Returns: {
+//   columns: ["products.name", "products.price"],
+//   tables: ["products"],
+//   query_type: "INSERT",
+//   target_table: "products"
+// }
+```
 
 ## Development
 

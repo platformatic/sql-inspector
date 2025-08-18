@@ -1,6 +1,7 @@
 # SQL Inspector
 
-A Rust library that parses SQL queries and extracts information about referenced tables and columns. This library is compiled to WebAssembly for use in Node.js applications.
+A Node.js module that parses SQL queries and extracts information about referenced tables and columns.
+This library is written in Rust and compiled to WebAssembly for use in Node.js applications.
 
 ## Features
 
@@ -53,7 +54,9 @@ console.log(wildcardResult);
 // }
 
 // INSERT statement
-const insertResult = sqlinspector("INSERT INTO users (id, name) VALUES (1, 'John')");
+const insertResult = sqlinspector(
+  "INSERT INTO users (id, name) VALUES (1, 'John')",
+);
 console.log(insertResult);
 // Output: {
 //   columns: ["users.id", "users.name"],
@@ -106,7 +109,7 @@ Parses a SQL query string and returns information about referenced tables and co
 
 ```javascript
 // SELECT query
-sqlinspector("SELECT name FROM users WHERE age > 18")
+sqlinspector("SELECT name FROM users WHERE age > 18");
 // Returns: {
 //   columns: ["age", "name"],
 //   tables: ["users"],
@@ -114,8 +117,8 @@ sqlinspector("SELECT name FROM users WHERE age > 18")
 //   target_table: ""
 // }
 
-// INSERT query  
-sqlinspector("INSERT INTO products (name, price) VALUES ('item', 10)")
+// INSERT query
+sqlinspector("INSERT INTO products (name, price) VALUES ('item', 10)");
 // Returns: {
 //   columns: ["products.name", "products.price"],
 //   tables: ["products"],

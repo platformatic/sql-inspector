@@ -178,7 +178,7 @@ cargo build
 1. Build the WASM package: `cargo make build`
 2. Navigate to the generated package: `cd pkg`
 3. Login to NPM: `npm login`
-4. Publish: `npm publish`
+4. Publish: `npm publish --access public` (by default, scoped packages are published with private visibility).
 
 The package is published under: https://www.npmjs.com/package/@platformatic/sql-inspector
 
